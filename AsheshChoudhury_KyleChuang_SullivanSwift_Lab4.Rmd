@@ -7,7 +7,7 @@ output:
   html_notebook: default
 ---
 
-page limite: 20 pages
+page limit: 20 pages
 
 # Description of the Lab
 
@@ -17,7 +17,7 @@ Specifically, this data set contains data for the 48 continental U.S. states fro
 
 ```{r include=FALSE}
 plottot = function(variable){
-  g=hist(data[variable],main='Histogram',xlab='Fatalities/population',ylab='Count')
+  g=hist(data[variable],main='Histogram of Total Fatality Rate',xlab='Fatalities/population',ylab='Count')
   print(g)
   
   tmp=data
@@ -33,6 +33,10 @@ plotmix = function(dataframe,variable,text){
   tmp['var']=tmp[,eval(variable)]
   g=ggplot(tmp,aes(y=totfatrte,x=year,fill=var))+geom_bar(stat='identity')+labs(x='Year',y='Fatalities/population',title=paste('Fatalities/Population vs ',text,' Laws'))+theme(plot.title = element_text(hjust = 0.5))+guides(fill=guide_legend(title=text))
   print(g)
+}
+
+density_plot = function(data, plotvar, title) {
+  ggplot(data, aes(plotvar)) + geom_density() + ggtitle(title)
 }
 ```
 
@@ -58,26 +62,36 @@ head(data)
 
 The dataset contains about 1200 observations ranging from 1980 to 2004 for the 48 contentential states. The observed variables include: Speed limits (`slXX`), seat belt and zero tolerance laws, graduated driver, blood alcohol level (`bacXX`), per se are in percent of year by months. `Sbl70plus`, `sbprim`, `sbsecon` and `dXX` variables are simply derivatives or dummy variables of the other variables in the data set.
 
-Our research question is whether or not traffic laws can affect total fatalities. Total fatalities is a function of population, vehicle miles, traffic laws and unobservable variables. Our dataset contains 9 fatality-related variables, some normalized in various ways. Since traffic laws cannot affect population at all, we choose `totofatrte`, total fatalities per 100,000 population, to assess the impact of traffic laws. We will not consider the weekend and night fatality variables as we are focusing on total fatalities and not when they occurred.
+Our research question is whether or not traffic laws can affect total fatalities. Total fatalities is a function of population, vehicle miles, traffic laws and unobservable variables. Our dataset contains 9 fatality-related variables, some normalized in various ways. Since traffic laws cannot affect population at all, we choose `totofatrte`, total fatalities per 100,000 population, to assess the impact of traffic laws. We will not consider the weekend and night fatality variables as we are focusing on total fatalities and not when they occurred. Since since the total fatalities variable we're working with is already noralized by population, we will not examine state population. Vehicle miles will not be examined either. Instead, vehicle miles per capital (`vehicmilepc`) will be analyzed instead as it is normalized by population.
 
 ```{r}
 #df=data[,c('year','state','totfatrte','sl55','sl65','sl70','sl75','slnone','seatbelt','minage','zerotol','gdl','bac10','bac08','perse','statepop','unem','perc14_24')]
 ```
 
 
-```{r}
+```{r }
 #table(df$year)
 #table(df$state)
 ```
+
+```{r}
+#pairs(~totfatrte+zerotol+gdl+perse+vehicmilespc, data=tmp, lower.panel=panel.smooth)
+
+#ggplot(tmp, aes(x=totfatrte, y=zerotol)) + geom_point()
+```
+
+negative correlation with `totfatrte` & `perse`, `vehcmilespc`
 
 ```{r fig.height=3}
 plottot('totfatrte')
 ```
 
-Mean fatalities/Population have dropped by about 10% from 1980 to 2004. State 1 has persistently stayed near the top of the fataliees while 38 seems to stay near the bottom. The range of fatalities does not change too much through out time. Since we have already normaled fatalies by population, we will not examine the independent variable, state population. Vehicle miles will not be examined either. Instead, vehicle miles per capital (vehicmilepc) will be analyzed instead as it is normalized by population.
+## HISTOGRAM ISN'T DISPLAYING TITLES
+
+Mean fatalities/population has dropped by about 10% from 1980 to 2004. State 1 has persistently stayed near the top of the fatalies while State 38 seems to stay near the bottom. The range of fatalities changes some throughout time, with the highest fatality rate dropping from over %50% in 1980 to under %45% in 2004. The minimum values for fatalities drop at well, but less overall, from about just over $10$ in 1980 to just under $10$ in 2004.
 
 ```{r}
-tmp = data %>% select(year,totfatrte,sl55,sl65,sl70,sl75,slnone) %>% group_by(year) %>% summarize_all(funs(mean)) 
+tmp=data %>% select(year,totfatrte,sl55,sl65,sl70,sl75,slnone) %>% group_by(year) %>% summarize_all(funs(mean)) 
 tmp=tmp$totfatrte*tmp
 tmp$year=tmp$year/sqrt(tmp$totfatrte)
 tmp$totfatrte=NULL
@@ -88,7 +102,9 @@ barplot(as.matrix(tmp),col=c('cadetblue1','green','brown','yellow','blue'),xlab=
 legend('bottomleft',legend=rownames(tmp),col=c('cadetblue1','green','brown','yellow','blue'),lty=c(1,1,1,1))
 ```
 
-Initially, the speed limit (SL) increase does not seem to affect fatalities immediately. In 1986-1987, SL increased in many states and in 1988-1991, fatalities fell by about 10%. The variable may be a candidate as an interaction variable with time. 
+## SS I'm a little confused as to who these plot are put together. same question on all stacked-like bar charts. Could we view stacked bar charts of the Speed limits and impose and average line for `totfatrte` on top
+
+Initially, the speed limit (`slXX`) increase does not seem to affect the average total fatality rate across states immediately. In 1986-1987, speed limits increased in many states and in 1988-1991, fatalities fell by about 10%. The variable may be a candidate as an interaction variable with time. 
 
 ```{r}
 tmp = data %>% select(year,totfatrte,sl70plus) %>% group_by(year) %>% summarize_all(funs(mean)) %>% mutate(sl70under=1-sl70plus)
@@ -102,7 +118,7 @@ barplot(as.matrix(tmp),col=c('blue','red'),xlab='Year',ylab='Fatalities/populati
 legend('bottomleft',legend=rownames(tmp),col=c('blue','red'),lty=c(1,1,1,1))
 ```
 
-Generally, it appears that speed limit over 70+ does not affect fatalities.
+TO further examine speed limits, we split the variables into two groups - states with speed limits under 70 and states with speed limits over 70. From the chart, it appears that speed limit over 70+ does not impact fatalities in a significant way.
 
 ```{r}
 tmp = data %>% select(year,totfatrte,bac10,bac08) %>% group_by(year) %>% summarize_all(funs(mean)) %>% mutate(bac0=1-bac10-bac08) 
@@ -117,16 +133,18 @@ barplot(as.matrix(tmp),col=c('blue','green','yellow'),xlab='Year',ylab='Fataliti
 legend('topright',legend=rownames(tmp),col=c('blue','green','yellow'),lty=c(1,1,1,1))
 ```
 
-BAC laws appear to have an immediate impact on fatalieis. More interestingly, the graph suggests transformig the BAC laws into a binary variabe as a BAC08 and BAC10 does not appear to affect fatalities. There does not appear to be much lagged effect WHY???.
+`bac0` represents where states did not have laws relating to blood alcohol content.
 
-We will perform t-tests for 2001 and 2002 when the bac08 and bac10 are closest to 50% between the states. Two t-tests are performed to avoid the general downward trend of fatalities that could impact the analysis. In both t-tests, the $H_0$: differences in means $=0$ are not rejected. From the graph above, there aren't likely to be lagged effects for bac10 and bac8 as bac10 decreased from 1997-2004, but fatalities appear roughly the same.
+Blood Alcohol Content laws appear to have an immediate impact on fatalities. More interestingly, the graph suggests transformig the BAC laws into a binary variabe, as a `bac08` and `bac10` does not appear to affect fatalities, but the initial implementation of drinking-related laws has an impact. There does not appear to be much lagged effect WHY???. ##This may also vary by state?
+
+We will perform t-tests for 2001 and 2002 when the `bac08` and `bac10` are closest to 50% between the states. Two t-tests are performed to avoid the general downward trend of fatalities impacting the analysis. In both t-tests, the $H_0$: differences in means $=0$ are not rejected. From the graph above, there aren't likely to be lagged effects for `bac10` and `bac08` as `bac10` decreased from 1997-2004, but fatalities appear roughly the same.
 
 ```{r}
 t.test(data[data$year==2001 & data$bac10==1,"totfatrte"],data[data$year==2001 & data$bac08==1,'totfatrte'])
 t.test(data[data$year==2002 & data$bac10==1,"totfatrte"],data[data$year==2002 & data$bac08==1,'totfatrte'])  
 ```
 
-We may later test this with a F-test of BAC08 and BAC10. If both show insignificance in a multivariate regression but rejects the $H_0$ in a f-test, we should convert it into a binary variable of BAC laws or none
+We may later test this with a F-test of `bac08` and `bac10`. If both show insignificance in a multivariate regression but rejects the $H_0$ in a f-test, we should convert it into a binary variable of BAC laws or none
 
 ```{r}
 tmp = data %>% select(year,totfatrte,sbprim,sbsecon) %>% group_by(year) %>% summarize_all(funs(mean)) %>% mutate(sbnone=1-sbprim-sbsecon) 
@@ -141,9 +159,9 @@ barplot(as.matrix(tmp),col=c('blue','green','yellow'),xlab='Year',ylab='Fataliti
 legend('topright',legend=rownames(tmp),col=c('blue','green','yellow'),lty=c(1,1,1,1))
 ```
 
-Seatbelts appear to have a simulatenous decrease with fatalities - it should be included as an independent variable. Much like BAC levels, the mix of seatbelt laws do not appear to affect fatalities. Seatbelt laws appear to be an on-off binary switch. There appears to be lagged effect on the binary seatbelt law - possibly the population is getting in the habit of putting on seatbelts.
+Seatbelts appear to have a simulatenous decrease with fatalities - it should be included as an independent variable. Much like BAC levels, the mix of seatbelt laws do not appear to affect fatalities. Seatbelt laws appear to be an on-off binary switch. There appears to be slightly lagged effect on the binary seatbelt law - possibly the population is getting in the habit of putting on seatbelts. After most states have implemented seatbelt laws (1992-1995), though, the average fatality rate evens off.
 
-We will perform t-test for 1999 and 2000 where the percentages are closer to even for sbprim and sbsecon. For both t-tests, $H_0$ is not rejected and there does not appear to be any contemporaneous impact difference between seatbelt laws. Despite the increase in sbprim mix from 1995 to 2004 , the fatalities from 1995 to 2004 is similar. There is unlikely to be a lagged impact of seatbelt law differences.
+We will perform t-test for 1999 and 2000 where the percentages are closer to even for sbprim and sbsecon. For both t-tests, $H_0$ is not rejected and there does not appear to be any contemporaneous impact difference between seatbelt laws. Despite the increase in sbprim mix from 1995 to 2004, the fatalities from 1995 to 2004 is similar. There is unlikely to be a lagged impact of seatbelt law differences.
 
 ```{r}
 t.test(data[data$year==1999 & data$sbprim==1,"totfatrte"],data[data$year==1999 & data$sbsecon==1,'totfatrte'])
@@ -158,14 +176,9 @@ tmp2=tmp2[tmp2$minage %in% unique(data$minage),c('state','minage')]
 tmp2=tmp2[!(tmp2$state %in% c(47,51)),c('state','minage')]
 tmp2
 ```
+## These might be better as distinct colors since we only have 4 categories
 
-Minmum drinking age appears to have some effect on fatalies. Interestingly, all states listed did not have minage laws changed during the period. Thea mean minage from 1980-1990 trended higher to 21 in 1990. If we were to focus on minage, we can split the data into 2 sets and run separate analysis, detrend and analyze the impact of minage on fatalities. We should also interact this variable with BAC variables as raising minimum drinking age may potentially offset some effects of BAC laws. The interaction term is expected to have a negative coefficient.
-
-```{r}
-pairs(~totfatrte+zerotol+gdl+perse+vehicmilespc, data=tmp, lower.panel=panel.smooth)
-
-ggplot(tmp, aes(x=totfatrte, y=zerotol)) + geom_point()
-```
+Minmum drinking age appears to have some effect on fatalies. Interestingly, all states listed did not have minimum age laws changed during the period. The mean `minage` from 1980-1990 trended higher to 21 in 1990. If we were to focus on `minage`, we can split the data into 2 sets and run separate analysis, detrend and analyze the impact of `minage` on fatalities. We should also interact this variable with BAC variables as raising minimum drinking age may potentially offset some effects of BAC laws. The interaction term is expected to have a negative coefficient.
 
 ```{r}
 plotmix(tmp,'zerotol','Zero Tolerance')
@@ -210,7 +223,9 @@ hist(log(tmp$perc14_24))
 
 From the EDA, there are variables that appear to be "incorrectly" correlated with fatalities, such as perc14_24 and vehicmilespc. Others such as BAC may be better transformed into a binary on-off variable. Per se, zero tolerance, graduated license, minimum drinking age laws appears to have no effect while seatbelts appear to have a contemporaneous impact on fatalites. Speed Limit laws appear to have a lagged effect.
 
-We will first examine the general time trend of fatalities. Recall that our fatalities variable, totfatrte, is Fatalities/100,000 population has already been normalized by population so proper analysis of impact of traffic laws on fatalities can be analyzed. Note that traffic laws are most likely uncorrelated with state population as shown below and it has a lower correlation than vehicle miles suggesting it as a better variable to normalize since it's more likely to be independent.
+We will first examine the general time trend of fatalities. Recall that our fatalities variable, `totfatrte`, is Fatalities per 100,000 population is already  normalized by population, so proper analysis of impact of traffic laws on fatalities can be analyzed. Note that traffic laws are most likely uncorrelated with state population as shown below and it (??) has a lower correlation than vehicle miles suggesting that normalizing fatalities on vehicle miles may be better since it's more likely to be independent.
+
+## SS we can include a chart with state total fatality rate v popultion? that would confirm there's not relationship.
 
 ```{r}
 cor(data[,c('statepop','vehicmiles','minage','zerotol','gdl','seatbelt')])
