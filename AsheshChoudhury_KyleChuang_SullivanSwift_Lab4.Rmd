@@ -90,7 +90,7 @@ plottot('totfatrte')
 
 Mean fatalities/population has dropped by about 10% from 1980 to 2004. State 1 has persistently stayed near the top of the fatalies while State 38 seems to stay near the bottom. The range of fatalities changes some throughout time, with the highest fatality rate dropping from over %50% in 1980 to under %45% in 2004. The minimum values for fatalities drop at well, but less overall, from about just over $10$ in 1980 to just under $10$ in 2004.
 
-```{r}
+```{r fig.height=3}
 tmp=data %>% select(year,totfatrte,sl55,sl65,sl70,sl75,slnone) %>% group_by(year) %>% summarize_all(funs(mean)) 
 tmp=tmp$totfatrte*tmp
 tmp$year=tmp$year/sqrt(tmp$totfatrte)
@@ -106,7 +106,7 @@ legend('bottomleft',legend=rownames(tmp),col=c('cadetblue1','green','brown','yel
 
 Initially, the speed limit (`slXX`) increase does not seem to affect the average total fatality rate across states immediately. In 1986-1987, speed limits increased in many states and in 1988-1991, fatalities fell by about 10%. The variable may be a candidate as an interaction variable with time. 
 
-```{r}
+```{r fig.height=3}
 tmp = data %>% select(year,totfatrte,sl70plus) %>% group_by(year) %>% summarize_all(funs(mean)) %>% mutate(sl70under=1-sl70plus)
 tmp=tmp$totfatrte*tmp
 tmp$year=tmp$year/sqrt(tmp$totfatrte)
@@ -120,7 +120,7 @@ legend('bottomleft',legend=rownames(tmp),col=c('blue','red'),lty=c(1,1,1,1))
 
 TO further examine speed limits, we split the variables into two groups - states with speed limits under 70 and states with speed limits over 70. From the chart, it appears that speed limit over 70+ does not impact fatalities in a significant way.
 
-```{r}
+```{r fig.height=3}
 tmp = data %>% select(year,totfatrte,bac10,bac08) %>% group_by(year) %>% summarize_all(funs(mean)) %>% mutate(bac0=1-bac10-bac08) 
 
 tmp=tmp$totfatrte*tmp
@@ -139,14 +139,14 @@ Blood Alcohol Content laws appear to have an immediate impact on fatalities. Mor
 
 We will perform t-tests for 2001 and 2002 when the `bac08` and `bac10` are closest to 50% between the states. Two t-tests are performed to avoid the general downward trend of fatalities impacting the analysis. In both t-tests, the $H_0$: differences in means $=0$ are not rejected. From the graph above, there aren't likely to be lagged effects for `bac10` and `bac08` as `bac10` decreased from 1997-2004, but fatalities appear roughly the same.
 
-```{r}
+```{r fig.height=3}
 t.test(data[data$year==2001 & data$bac10==1,"totfatrte"],data[data$year==2001 & data$bac08==1,'totfatrte'])
 t.test(data[data$year==2002 & data$bac10==1,"totfatrte"],data[data$year==2002 & data$bac08==1,'totfatrte'])  
 ```
 
 We may later test this with a F-test of `bac08` and `bac10`. If both show insignificance in a multivariate regression but rejects the $H_0$ in a f-test, we should convert it into a binary variable of BAC laws or none
 
-```{r}
+```{r fig.height=3}
 tmp = data %>% select(year,totfatrte,sbprim,sbsecon) %>% group_by(year) %>% summarize_all(funs(mean)) %>% mutate(sbnone=1-sbprim-sbsecon) 
 
 tmp=tmp$totfatrte*tmp
@@ -168,7 +168,7 @@ t.test(data[data$year==1999 & data$sbprim==1,"totfatrte"],data[data$year==1999 &
 t.test(data[data$year==2000 & data$sbprim==1,"totfatrte"],data[data$year==2000 & data$sbsecon==1,'totfatrte'])  
 ```
 
-```{r}
+```{r fig.height=3}
 tmp = data %>% group_by(year) %>% summarize_all(funs(mean))
 plotmix(tmp,'minage','Minimum Drinking Age')
 tmp2=data %>% group_by(state) %>% summarize_all(funs(mean)) %>% as.data.frame
@@ -180,43 +180,45 @@ tmp2
 
 Minmum drinking age appears to have some effect on fatalies. Interestingly, all states listed did not have minimum age laws changed during the period. The mean `minage` from 1980-1990 trended higher to 21 in 1990. If we were to focus on `minage`, we can split the data into 2 sets and run separate analysis, detrend and analyze the impact of `minage` on fatalities. We should also interact this variable with BAC variables as raising minimum drinking age may potentially offset some effects of BAC laws. The interaction term is expected to have a negative coefficient.
 
-```{r}
+```{r fig.height=3}
 plotmix(tmp,'zerotol','Zero Tolerance')
 ```
 
 Zero tolerance laws do not appear to have a contemperous impact on fatalities but may potentally have a long-tailed effect.
 
-```{r}
+```{r fig.height=3}
 plotmix(tmp,'gdl','Graduated Driver License')
 ```
 
 Graduated driver license laws do not appear to impact fatalies very much. Most likely, it will not impact fatalities even accounting for time lags.
 
-```{r}
+```{r fig.height=3}
 plotmix(tmp,'perse','Per Se Law')
 ```
 
 Per se law does not appear to impact fatalities much as the years where the shift to per se laws were not contemporaneous. It may potentially have a lagged effect but seems unlikely. The per se laws should increase the effectiveness of BAC laws as the punishments are much harsher.
 
-```{r}
+```{r fig.height=3}
 plotmix(tmp,'vehicmilespc','Vehicle Miles Per Capita')
 ```
 
 Vehicle miles may be secondarily affected by traffic laws such as graduated license laws. Preliminarly, fatalities appear to decrease as it increases. This makes no sense and is likely to be trending effect through time.
 
-```{r}
+```{r fig.height=3}
 plotmix(tmp,'unem','Unemployment')
 ```
 
+##Here I think using unique colors would look good. esp since the pattern is more random
+
 Fatalities do not appear to be affected by unemployment rates at all. In fact, the pattern appears random. We expect this variable to have a $\beta$ close to 0 in regressions.
 
-```{r}
+```{r fig.height=3}
 plotmix(tmp,'perc14_24','Percent 14-24')
 ```
 
 It appears that percent 14-24 in is negatively correlated with fatalities. This makes no sense is it may simply be an artifact of general trend. The variable is extremely left skewed and a log transformation will be performed.
 
-```{r}
+```{r fig.height=3}
 hist(tmp$perc14_24)
 hist(log(tmp$perc14_24))
 ```
