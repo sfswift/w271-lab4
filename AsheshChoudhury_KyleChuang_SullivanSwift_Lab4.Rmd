@@ -1,0 +1,337 @@
+---
+title: "Statistical Methods for Discrete Response, Time Series, and Panel Data (W271): Lab 4"
+author: "W271 Instructional Team"
+date: "Fall 2018"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+page limite: 20 pages
+
+# Description of the Lab
+
+In this lab, you are asked to answer the question **"Do changes in traffic laws affect traffic fatalities?"**  To do so, you will conduct the tasks specified below using the data set *driving.Rdata*, which includes 25 years of data that cover changes in various state drunk driving, seat belt, and speed limit laws. 
+
+Specifically, this data set contains data for the 48 continental U.S. states from 1980 through 2004. Various driving laws are indicated in the data set, such as the alcohol level at which drivers are considered legally intoxicated. There are also indicators for per se laws where licenses can be revoked without a trial and seat belt laws. A few economics and demographic variables are also included. The description of the each of the variables in the dataset is come with the dataste.
+
+```{r include=FALSE}
+plottot = function(variable){
+  g=hist(data[variable],main='Histogram',xlab='Fatalities/population',ylab='Count')
+  print(g)
+  
+  tmp=data
+  tmp['var']=data[,eval(variable)]
+  g=ggplot(tmp,aes(y=var,x=factor(year),group=factor(state),color=factor(state)))+geom_line()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+labs(x=c('Year'),y=c('Fatalities/population'),title=c('Fatalies/Population by Year by State'),color=c('State'))+theme(plot.title = element_text(hjust = 0.5))
+  print(g)
+  
+  g=ggplot(tmp,aes(y=var,x=factor(year),fill=factor(year)))+geom_boxplot()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+labs(x=c('Year'),y=c('Fatalities/population'),title=c('Fatalies/Population by Year'),fill=c('Year'))+theme(plot.title = element_text(hjust = 0.5))+guides(fill=FALSE) 
+  print(g)
+}
+
+plotmix = function(dataframe,variable,text){
+  tmp['var']=tmp[,eval(variable)]
+  g=ggplot(tmp,aes(y=totfatrte,x=year,fill=var))+geom_bar(stat='identity')+labs(x='Year',y='Fatalities/population',title=paste('Fatalities/Population vs ',text,' Laws'))+theme(plot.title = element_text(hjust = 0.5))+guides(fill=guide_legend(title=text))
+  print(g)
+}
+```
+
+```{r include=FALSE}
+library(Hmisc)
+library(car)
+library(ggplot2)
+library(ggrepel)
+library(plm)
+library(tidyr)
+library(dplyr)
+#rm(list=ls())
+```
+
+
+```{r}
+load('driving.RData')
+str(data)
+desc
+head(data)
+#describe(data)
+```
+
+The dataset contains about 1200 observations ranging from 1980 to 2004 for the 48 contentential states. The observed variables include: Speed limits (`slXX`), seat belt and zero tolerance laws, graduated driver, blood alcohol level (`bacXX`), per se are in percent of year by months. `Sbl70plus`, `sbprim`, `sbsecon` and `dXX` variables are simply derivatives or dummy variables of the other variables in the data set.
+
+Our research question is whether or not traffic laws can affect total fatalities. Total fatalities is a function of population, vehicle miles, traffic laws and unobservable variables. Our dataset contains 9 fatality-related variables, some normalized in various ways. Since traffic laws cannot affect population at all, we choose `totofatrte`, total fatalities per 100,000 population, to assess the impact of traffic laws. We will not consider the weekend and night fatality variables as we are focusing on total fatalities and not when they occurred.
+
+```{r}
+#df=data[,c('year','state','totfatrte','sl55','sl65','sl70','sl75','slnone','seatbelt','minage','zerotol','gdl','bac10','bac08','perse','statepop','unem','perc14_24')]
+```
+
+
+```{r}
+#table(df$year)
+#table(df$state)
+```
+
+```{r fig.height=3}
+plottot('totfatrte')
+```
+
+Mean fatalities/Population have dropped by about 10% from 1980 to 2004. State 1 has persistently stayed near the top of the fataliees while 38 seems to stay near the bottom. The range of fatalities does not change too much through out time. Since we have already normaled fatalies by population, we will not examine the independent variable, state population. Vehicle miles will not be examined either. Instead, vehicle miles per capital (vehicmilepc) will be analyzed instead as it is normalized by population.
+
+```{r}
+tmp = data %>% select(year,totfatrte,sl55,sl65,sl70,sl75,slnone) %>% group_by(year) %>% summarize_all(funs(mean)) 
+tmp=tmp$totfatrte*tmp
+tmp$year=tmp$year/sqrt(tmp$totfatrte)
+tmp$totfatrte=NULL
+rownames(tmp)=tmp$year
+tmp$year=NULL
+tmp=t(tmp)
+barplot(as.matrix(tmp),col=c('cadetblue1','green','brown','yellow','blue'),xlab='Year',ylab='Fatalities/population',main='Fatalities/population by year and Speed Limit')
+legend('bottomleft',legend=rownames(tmp),col=c('cadetblue1','green','brown','yellow','blue'),lty=c(1,1,1,1))
+```
+
+Initially, the speed limit (SL) increase does not seem to affect fatalities immediately. In 1986-1987, SL increased in many states and in 1988-1991, fatalities fell by about 10%. The variable may be a candidate as an interaction variable with time. 
+
+```{r}
+tmp = data %>% select(year,totfatrte,sl70plus) %>% group_by(year) %>% summarize_all(funs(mean)) %>% mutate(sl70under=1-sl70plus)
+tmp=tmp$totfatrte*tmp
+tmp$year=tmp$year/sqrt(tmp$totfatrte)
+tmp$totfatrte=NULL
+rownames(tmp)=tmp$year
+tmp$year=NULL
+tmp=t(tmp)
+barplot(as.matrix(tmp),col=c('blue','red'),xlab='Year',ylab='Fatalities/population',main='Fatalities/population by year and Speed Limit > 70+')
+legend('bottomleft',legend=rownames(tmp),col=c('blue','red'),lty=c(1,1,1,1))
+```
+
+Generally, it appears that speed limit over 70+ does not affect fatalities.
+
+```{r}
+tmp = data %>% select(year,totfatrte,bac10,bac08) %>% group_by(year) %>% summarize_all(funs(mean)) %>% mutate(bac0=1-bac10-bac08) 
+
+tmp=tmp$totfatrte*tmp
+tmp$year=tmp$year/sqrt(tmp$totfatrte)
+tmp$totfatrte=NULL
+rownames(tmp)=tmp$year
+tmp$year=NULL
+tmp=t(tmp)
+barplot(as.matrix(tmp),col=c('blue','green','yellow'),xlab='Year',ylab='Fatalities/100k vehicle miles',main='Fatalities/100k vehicle mile by year and Speed Limit')
+legend('topright',legend=rownames(tmp),col=c('blue','green','yellow'),lty=c(1,1,1,1))
+```
+
+BAC laws appear to have an immediate impact on fatalieis. More interestingly, the graph suggests transformig the BAC laws into a binary variabe as a BAC08 and BAC10 does not appear to affect fatalities. There does not appear to be much lagged effect WHY???.
+
+We will perform t-tests for 2001 and 2002 when the bac08 and bac10 are closest to 50% between the states. Two t-tests are performed to avoid the general downward trend of fatalities that could impact the analysis. In both t-tests, the $H_0$: differences in means $=0$ are not rejected. From the graph above, there aren't likely to be lagged effects for bac10 and bac8 as bac10 decreased from 1997-2004, but fatalities appear roughly the same.
+
+```{r}
+t.test(data[data$year==2001 & data$bac10==1,"totfatrte"],data[data$year==2001 & data$bac08==1,'totfatrte'])
+t.test(data[data$year==2002 & data$bac10==1,"totfatrte"],data[data$year==2002 & data$bac08==1,'totfatrte'])  
+```
+
+We may later test this with a F-test of BAC08 and BAC10. If both show insignificance in a multivariate regression but rejects the $H_0$ in a f-test, we should convert it into a binary variable of BAC laws or none
+
+```{r}
+tmp = data %>% select(year,totfatrte,sbprim,sbsecon) %>% group_by(year) %>% summarize_all(funs(mean)) %>% mutate(sbnone=1-sbprim-sbsecon) 
+
+tmp=tmp$totfatrte*tmp
+tmp$year=tmp$year/sqrt(tmp$totfatrte)
+tmp$totfatrte=NULL
+rownames(tmp)=tmp$year
+tmp$year=NULL
+tmp=t(tmp)
+barplot(as.matrix(tmp),col=c('blue','green','yellow'),xlab='Year',ylab='Fatalities/100k vehicle miles',main='Fatalities/100k vehicle mile by year and Seatbelt Laws')
+legend('topright',legend=rownames(tmp),col=c('blue','green','yellow'),lty=c(1,1,1,1))
+```
+
+Seatbelts appear to have a simulatenous decrease with fatalities - it should be included as an independent variable. Much like BAC levels, the mix of seatbelt laws do not appear to affect fatalities. Seatbelt laws appear to be an on-off binary switch. There appears to be lagged effect on the binary seatbelt law - possibly the population is getting in the habit of putting on seatbelts.
+
+We will perform t-test for 1999 and 2000 where the percentages are closer to even for sbprim and sbsecon. For both t-tests, $H_0$ is not rejected and there does not appear to be any contemporaneous impact difference between seatbelt laws. Despite the increase in sbprim mix from 1995 to 2004 , the fatalities from 1995 to 2004 is similar. There is unlikely to be a lagged impact of seatbelt law differences.
+
+```{r}
+t.test(data[data$year==1999 & data$sbprim==1,"totfatrte"],data[data$year==1999 & data$sbsecon==1,'totfatrte'])
+t.test(data[data$year==2000 & data$sbprim==1,"totfatrte"],data[data$year==2000 & data$sbsecon==1,'totfatrte'])  
+```
+
+```{r}
+tmp = data %>% group_by(year) %>% summarize_all(funs(mean))
+plotmix(tmp,'minage','Minimum Drinking Age')
+tmp2=data %>% group_by(state) %>% summarize_all(funs(mean)) %>% as.data.frame
+tmp2=tmp2[tmp2$minage %in% unique(data$minage),c('state','minage')]
+tmp2=tmp2[!(tmp2$state %in% c(47,51)),c('state','minage')]
+tmp2
+```
+
+Minmum drinking age appears to have some effect on fatalies. Interestingly, all states listed did not have minage laws changed during the period. Thea mean minage from 1980-1990 trended higher to 21 in 1990. If we were to focus on minage, we can split the data into 2 sets and run separate analysis, detrend and analyze the impact of minage on fatalities. We should also interact this variable with BAC variables as raising minimum drinking age may potentially offset some effects of BAC laws. The interaction term is expected to have a negative coefficient.
+
+```{r}
+pairs(~totfatrte+zerotol+gdl+perse+vehicmilespc, data=tmp, lower.panel=panel.smooth)
+
+ggplot(tmp, aes(x=totfatrte, y=zerotol)) + geom_point()
+```
+
+```{r}
+plotmix(tmp,'zerotol','Zero Tolerance')
+```
+
+Zero tolerance laws do not appear to have a contemperous impact on fatalities but may potentally have a long-tailed effect.
+
+```{r}
+plotmix(tmp,'gdl','Graduated Driver License')
+```
+
+Graduated driver license laws do not appear to impact fatalies very much. Most likely, it will not impact fatalities even accounting for time lags.
+
+```{r}
+plotmix(tmp,'perse','Per Se Law')
+```
+
+Per se law does not appear to impact fatalities much as the years where the shift to per se laws were not contemporaneous. It may potentially have a lagged effect but seems unlikely. The per se laws should increase the effectiveness of BAC laws as the punishments are much harsher.
+
+```{r}
+plotmix(tmp,'vehicmilespc','Vehicle Miles Per Capita')
+```
+
+Vehicle miles may be secondarily affected by traffic laws such as graduated license laws. Preliminarly, fatalities appear to decrease as it increases. This makes no sense and is likely to be trending effect through time.
+
+```{r}
+plotmix(tmp,'unem','Unemployment')
+```
+
+Fatalities do not appear to be affected by unemployment rates at all. In fact, the pattern appears random. We expect this variable to have a $\beta$ close to 0 in regressions.
+
+```{r}
+plotmix(tmp,'perc14_24','Percent 14-24')
+```
+
+It appears that percent 14-24 in is negatively correlated with fatalities. This makes no sense is it may simply be an artifact of general trend. The variable is extremely left skewed and a log transformation will be performed.
+
+```{r}
+hist(tmp$perc14_24)
+hist(log(tmp$perc14_24))
+```
+
+From the EDA, there are variables that appear to be "incorrectly" correlated with fatalities, such as perc14_24 and vehicmilespc. Others such as BAC may be better transformed into a binary on-off variable. Per se, zero tolerance, graduated license, minimum drinking age laws appears to have no effect while seatbelts appear to have a contemporaneous impact on fatalites. Speed Limit laws appear to have a lagged effect.
+
+We will first examine the general time trend of fatalities. Recall that our fatalities variable, totfatrte, is Fatalities/100,000 population has already been normalized by population so proper analysis of impact of traffic laws on fatalities can be analyzed. Note that traffic laws are most likely uncorrelated with state population as shown below and it has a lower correlation than vehicle miles suggesting it as a better variable to normalize since it's more likely to be independent.
+
+```{r}
+cor(data[,c('statepop','vehicmiles','minage','zerotol','gdl','seatbelt')])
+```
+
+```{r}
+ggplot(data %>% select(year,totfatrte) %>% group_by(year) %>% summarize_all(funs(mean)),aes(year,totfatrte,label=totfatrte))+geom_line()+geom_point()+geom_text(aes(label=round(totfatrte,1),col='red'),hjust=0, vjust=0) 
+
+tmp = data %>% select(year,totfatrte) %>% group_by(year) %>% summarise_all(funs(mean))
+ggplot(tmp,aes(year,totfatrte,label=totfatrte))+geom_line()+geom_point(aes(col='red'))+geom_label_repel(aes(label = round(totfatrte,2)), box.padding   = 0.35,  point.padding = 0.5, segment.color = 'grey50') + theme_classic()
+```
+
+```{r}
+m=lm(totfatrte~factor(year),data)
+summary(m)
+```
+
+Regression of fatalities vs each year shows that there is a clear significant downward trend. The $F-test$ p-value of $\sim 0$ shows that the dummy variables for year is jointly significant. The regression suggests that fatalities have been decreasing through time and the $\beta$s show the mean differential between the year $t$ and 1980. The intercept of the regression is the mean fatalities in 1980 and the coefficients is the mean differences from 1980 for each year respectively. Notice the 2 chart are exact same shape after the 1st year (1980).
+
+```{r}
+plot(x=1981:2004,y=m$coefficients[2:length(m$coefficients)],type='l',main='Coefficents for fatality by Year (Mean difference from 1980)',xlab='Year',ylab="Fatality difference from 1980")
+points(x=1981:2004,y=m$coefficients[2:length(m$coefficients)],col='blue')
+```
+
+Note that the residuals are not normally distributed and fails the Shapiro Wilks test.
+
+```{r}
+qqnorm(m$residuals)
+qqline(m$residuals,col='red')
+shapiro.test(m$residuals)
+```
+
+We will now expand the previous regression with additional regressors - bac08, bac10, perse, sbprim, sbsecon, sl70plus, gld, perc14_24, unem and vehicmilespc. perc14-24 is logged since it is very left skewed to expand out variance between the observations and assist the regression. unem and vehicmilepc do not appear to require transformations as they appear more normally/uniformly distributed. The rest of variables are binary variables and no transformations are done. BAC and speed limit variables are not binarized and no interactions are implemented as found through the EDA due to the scope of the analysis.
+
+```{r}
+m=lm(totfatrte~factor(year)+bac08+bac10+perse+sbprim+sbsecon+sl70plus+gdl+log(perc14_24)+unem+vehicmilespc,data)
+summary(m)
+```
+
+## WE SHOULD PROBABLY COMMENT ON RESIDUALS AND MODEL ASSUMPTIONS HERE
+
+## POOLED OLS IS NOT VALID BCS OF SERIAL CORRELATION CAUSED BY REPEATED OBSERVATIONS
+
+```{r}
+library(plm)
+data.p=pdata.frame(data,index = c('state','year'))
+#m.pool=plm(totfatrte~bac08+bac10+perse+sbprim+sbsecon+sl70plus+gdl+log(perc14_24)+unem+vehicmilespc,data = data.p,model='pooling')
+#summary(m.pool)
+```
+bac08 and bac10 are coefficients of `r data.frame(t(m$coefficients))$bac08` and `r data.frame(t(m$coefficients))$bac10` with p-values of 0 and 0.038 respectively. The $\beta_{bac08}$ and $\beta_{bac10}$ represent the impact of having abac08 and bac10 laws in that year (regardless of the year) on the mean fatalities across the states. Per se laws also decrease the mean fatalities by `r data.frame(t(m$coefficients))$perse` once it's enacted. Primay seat belt laws does not seem to have an impact on fatalities despite the $\beta_{sbprim}=-0.077$, the p-value is at 0.85 indicating insignificance.
+
+```{r}
+m.fe=plm(totfatrte~bac08+bac10+perse+sbprim+sbsecon+sl70plus+gdl+log(perc14_24)+unem+vehicmilespc,data = data.p,model='within')
+summary(m.fe)
+```
+
+
+```{r}
+# shoudl add p-Value or SE in here
+d=data.frame(pooled=c(
+  data.frame(t(m$coefficients))$bac08,
+  data.frame(t(m$coefficients))$bac10,
+  data.frame(t(m$coefficients))$perse,
+  data.frame(t(m$coefficients))$sbprim),
+  FE=c(
+  data.frame(t(m.fe$coefficients))$bac08,
+  data.frame(t(m.fe$coefficients))$bac10,
+  data.frame(t(m.fe$coefficients))$perse,
+  data.frame(t(m.fe$coefficients))$sbprim))
+d
+```
+# COMMENT ON THE DIFFERENCES
+
+The coefficients are significantly different between the pooled OLS and Fixed Effects regression. FE model is better since it removes the fixed effects. Pooled OLS assumes that there is no correlation between unobserved variable and any of the regressors. If this assumption is broken, *heterogeniety bias* is introduced into the model. For example, dry laws, which are unobserved, may be correlated with bac08 laws and affect fatalities. Even if the assumption is not broken, the potential serial correlation in the composite error is not accounted for in pooled OLS. The standarded errors in a pooled OLS are incorrect as are statistical tests.  For the FE models, the assumption is that the idiosyncratic errors are uncorrelated conditional on the indepdendent variables and time-invariant unobservable variables. Given the current context, it the FE assumptions are more reasonable as time-invariant error can be eliminated.
+
+```{r}
+pooltest(totfatrte ~ bac08 + bac10 + perse + sbprim + sbsecon + sl70plus +  gdl + log(perc14_24) + unem + vehicmilespc,data=data.p,model='within')
+pbgtest(m.fe,order=2)
+```
+
+In comparing FE models with RE models, FE models is likely to be a better estimate in the current context. Like the Pooled OLS, RE model assumes no correlation between fixed effects and independent variables. The difference between the 2 models is that RE corrects the serial correlation within the composite error by estimating a correlation. The advantage of RE models over FE is the ability to estimate time-invariant variables. However, it also requires an extremely strong assumption on those variables and the indepdendent variables. Given the endogeniety issues, we believe fixed effects is a much better model than random effects.
+
+```{r}
+summary(m.fe)
+
+var1 <- data.frame(t(m.fe$coefficients))$vehicmilespc
+var2 <- data.frame(t(confint(m.fe)))$vehicmilespc
+```
+# WRITE THE FE MODEL
+
+# NOT SURE HOW THEY INTERPRET increase by 1000
+If $vehicmilepc$ increase by 1,000 in a time period $t$ assuming the $\bar{vehicmilepc}$ does not change form the FE model, $totfatrte$ is expected to increase r var1 with a 95% confidence interval of r var2. NEED MORE INTERPRETATION
+
+When autocorrelation and heteroskedasticity exists in errors, it implies that the samples are not iid. This causes your estimates to be biased.  This can be seen in the $sl70plus$ variable. In the pooled model, it suggests that increase speed limit increases total fataility. The fixed model, closer to the EDA expectations, indicated that it actually decreased fatalities. With the pooled model, there is autocorrelation and heteroskedasticity in the residuals. The estimates are unstable and inconsistent as shown by the poolability test that tests whether the coefficients are across time. Finally, the estimates are inefficient as the SE may be too low or too high depending on the value of independent variable.
+
+**Exercises:**
+
+1. Load the data. Provide a description of the basic structure of the dataset, as we have done throughout the semester. Conduct a very thorough EDA, which should include both graphical and tabular techniques, on the dataset, including both the dependent variable *totfatrte* and the potential explanatory variables. You need to write a detailed narrative of your observations of your EDA. *Reminder: giving an "output dump" (i.e. providing a bunch of graphs and tables without description and hoping your audience will interpret them) will receive a zero in this exercise.*
+
+2. How is the our dependent variable of interest *totfatrte* defined? What is the average of this variable in each of the years in the time period covered in this dataset? Estimate a linear regression model of *totfatrte* on a set of dummy variables for the years 1981 through 2004. What does this model explain? Describe what you find in this model. Did driving become safer over this period? Please provide a detailed explanation.
+
+3. Expand your model in *Exercise 2* by adding variables *bac08, bac10, perse, sbprim, sbsecon, sl70plus, gdl, perc14_24, unem, vehicmilespc*, and perhaps *transformations of some or all of these variables*. Please explain carefully your rationale, which should be based on your EDA, behind any transformation you made. If no transformation is made, explain why transformation is not needed. How are the variables *bac8* and *bac10* defined? Interpret the coefficients on *bac8* and *bac10*. Do *per se laws* have a negative effect on the fatality rate? What about having a primary seat belt law? (Note that if a law was enacted sometime within a year the fraction of the year is recorded in place of the zero-one indicator.)
+
+4. Reestimate the model from *Exercise 3* using a fixed effects (at the state level) model. How do the coefficients on *bac08, bac10, perse, and sbprim* compare with the pooled OLS estimates? Which set of estimates do you think is more reliable? What assumptions are needed in each of these models?  Are these assumptions reasonable in the current context?
+
+5. Would you perfer to use a random effects model instead of the fixed effects model you built in *Exercise 4*? Please explain.
+
+6. Suppose that *vehicmilespc*, the number of miles driven per capita, increases by $1,000$. Using the FE estimates, what is the estimated effect on *totfatrte*? Please interpret the estimate.
+
+7. If there is serial correlation or heteroskedasticity in the idiosyncratic errors of the model, what would be the consequences on the estimators and their standard errors?
+
+
+
+
+
+
+
+
+
+
+
+
+
+/
