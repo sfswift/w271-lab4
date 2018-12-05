@@ -38,6 +38,11 @@ plotmix = function(dataframe,variable,text){
 density_plot = function(data, plotvar, title) {
   ggplot(data, aes(plotvar)) + geom_density() + ggtitle(title)
 }
+
+conditional_plot = function(data, plotvar, condvar, title) {
+  g <- ggplot(data, aes(as.factor(condvar), plotvar)) 
+  g + geom_boxplot() + ggtitle(title)
+}
 ```
 
 ```{r include=FALSE}
@@ -54,9 +59,9 @@ library(dplyr)
 
 ```{r}
 load('driving.RData')
-str(data)
-desc
-head(data)
+#str(data)
+#desc
+#head(data)
 #describe(data)
 ```
 
@@ -90,7 +95,13 @@ plottot('totfatrte')
 
 Mean fatalities/population has dropped by about 10% from 1980 to 2004. State 1 has persistently stayed near the top of the fatalies while State 38 seems to stay near the bottom. The range of fatalities changes some throughout time, with the highest fatality rate dropping from over %50% in 1980 to under %45% in 2004. The minimum values for fatalities drop at well, but less overall, from about just over $10$ in 1980 to just under $10$ in 2004.
 
-```{r fig.height=3}
+```{r}
+conditional_plot(data, data$totfatrte, data$state, "Total Fatality Rate per 100,000 populartion by State")
+```
+
+There are several states that have higher overall fatality rates than the others. States 25, 32 and 51 may be further explored to see the relationships with the observed variables.
+
+```{r}
 tmp=data %>% select(year,totfatrte,sl55,sl65,sl70,sl75,slnone) %>% group_by(year) %>% summarize_all(funs(mean)) 
 tmp=tmp$totfatrte*tmp
 tmp$year=tmp$year/sqrt(tmp$totfatrte)
@@ -106,7 +117,7 @@ legend('bottomleft',legend=rownames(tmp),col=c('cadetblue1','green','brown','yel
 
 Initially, the speed limit (`slXX`) increase does not seem to affect the average total fatality rate across states immediately. In 1986-1987, speed limits increased in many states and in 1988-1991, fatalities fell by about 10%. The variable may be a candidate as an interaction variable with time. 
 
-```{r fig.height=3}
+```{r}
 tmp = data %>% select(year,totfatrte,sl70plus) %>% group_by(year) %>% summarize_all(funs(mean)) %>% mutate(sl70under=1-sl70plus)
 tmp=tmp$totfatrte*tmp
 tmp$year=tmp$year/sqrt(tmp$totfatrte)
@@ -120,7 +131,7 @@ legend('bottomleft',legend=rownames(tmp),col=c('blue','red'),lty=c(1,1,1,1))
 
 TO further examine speed limits, we split the variables into two groups - states with speed limits under 70 and states with speed limits over 70. From the chart, it appears that speed limit over 70+ does not impact fatalities in a significant way.
 
-```{r fig.height=3}
+```{r}
 tmp = data %>% select(year,totfatrte,bac10,bac08) %>% group_by(year) %>% summarize_all(funs(mean)) %>% mutate(bac0=1-bac10-bac08) 
 
 tmp=tmp$totfatrte*tmp
@@ -139,14 +150,14 @@ Blood Alcohol Content laws appear to have an immediate impact on fatalities. Mor
 
 We will perform t-tests for 2001 and 2002 when the `bac08` and `bac10` are closest to 50% between the states. Two t-tests are performed to avoid the general downward trend of fatalities impacting the analysis. In both t-tests, the $H_0$: differences in means $=0$ are not rejected. From the graph above, there aren't likely to be lagged effects for `bac10` and `bac08` as `bac10` decreased from 1997-2004, but fatalities appear roughly the same.
 
-```{r fig.height=3}
+```{r}
 t.test(data[data$year==2001 & data$bac10==1,"totfatrte"],data[data$year==2001 & data$bac08==1,'totfatrte'])
 t.test(data[data$year==2002 & data$bac10==1,"totfatrte"],data[data$year==2002 & data$bac08==1,'totfatrte'])  
 ```
 
 We may later test this with a F-test of `bac08` and `bac10`. If both show insignificance in a multivariate regression but rejects the $H_0$ in a f-test, we should convert it into a binary variable of BAC laws or none
 
-```{r fig.height=3}
+```{r}
 tmp = data %>% select(year,totfatrte,sbprim,sbsecon) %>% group_by(year) %>% summarize_all(funs(mean)) %>% mutate(sbnone=1-sbprim-sbsecon) 
 
 tmp=tmp$totfatrte*tmp
