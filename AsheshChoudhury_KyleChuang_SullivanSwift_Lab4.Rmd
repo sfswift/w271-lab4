@@ -43,6 +43,23 @@ conditional_plot = function(data, plotvar, condvar, title) {
   g <- ggplot(data, aes(as.factor(condvar), plotvar)) 
   g + geom_boxplot() + ggtitle(title)
 }
+
+
+ts_resid = function(x){
+  par(mfrow=c(2,2),par=c(2,2,2,2))
+  plot(x,main='t-Plot')
+  qqnorm(x)
+  qqline(x,col='red')
+  acf(x)
+  pacf(x)
+  d=data.frame(PhillipsPerron=pp.test(x)$p.value,
+               AugmentedDickeyFuller=adf.test(x)$p.value,
+               LjungBox=Box.test(x,type='Ljung-Box')$p.value,
+               ShapiroWilkes=shapiro.test(x)$p.value)
+  xtable(d)
+  
+  ShapiroWilks <- shapiro.test(x)$p.value
+}
 ```
 
 ```{r include=FALSE}
@@ -367,13 +384,3 @@ plm(totfatrte ~ d81 + d82 + d83 + d84 + d85 + d86 + d87 + d88 + d89 + d90 + d91 
 
 
 
-
-
-
-
-
-
-
-
-
-/
