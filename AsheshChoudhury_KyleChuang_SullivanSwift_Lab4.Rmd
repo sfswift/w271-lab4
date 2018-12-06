@@ -56,11 +56,10 @@ library(dplyr)
 #rm(list=ls())
 ```
 
-
 ```{r}
 load('driving.RData')
 #str(data)
-#desc
+desc
 #head(data)
 #describe(data)
 ```
@@ -72,7 +71,6 @@ Our research question is whether or not traffic laws can affect total fatalities
 ```{r}
 #df=data[,c('year','state','totfatrte','sl55','sl65','sl70','sl75','slnone','seatbelt','minage','zerotol','gdl','bac10','bac08','perse','statepop','unem','perc14_24')]
 ```
-
 
 ```{r }
 #table(df$year)
@@ -129,7 +127,7 @@ barplot(as.matrix(tmp),col=c('blue','red'),xlab='Year',ylab='Fatalities/populati
 legend('bottomleft',legend=rownames(tmp),col=c('blue','red'),lty=c(1,1,1,1))
 ```
 
-TO further examine speed limits, we split the variables into two groups - states with speed limits under 70 and states with speed limits over 70. From the chart, it appears that speed limit over 70+ does not impact fatalities in a significant way.
+To further examine speed limits, we split the variables into two groups - states with speed limits under 70 and states with speed limits over 70. From the chart, it appears that speed limit over 70+ does not impact fatalities in a significant way.
 
 ```{r}
 tmp = data %>% select(year,totfatrte,bac10,bac08) %>% group_by(year) %>% summarize_all(funs(mean)) %>% mutate(bac0=1-bac10-bac08) 
@@ -340,9 +338,25 @@ When autocorrelation and heteroskedasticity exists in errors, it implies that th
 
 2. How is the our dependent variable of interest *totfatrte* defined? What is the average of this variable in each of the years in the time period covered in this dataset? Estimate a linear regression model of *totfatrte* on a set of dummy variables for the years 1981 through 2004. What does this model explain? Describe what you find in this model. Did driving become safer over this period? Please provide a detailed explanation.
 
+```{r}
+lm1 <- lm(totfatrte ~ d81 + d82 + d83 + d84 + d85 + d86 + d87 + d88 + d89 + d90 + d91 + d92 + d93 + d94 + d95 + d96 + d97 + d98 + d99 + d00 + d01 + d02 + d03 + d04, data)
+
+lm1
+```
+
 3. Expand your model in *Exercise 2* by adding variables *bac08, bac10, perse, sbprim, sbsecon, sl70plus, gdl, perc14_24, unem, vehicmilespc*, and perhaps *transformations of some or all of these variables*. Please explain carefully your rationale, which should be based on your EDA, behind any transformation you made. If no transformation is made, explain why transformation is not needed. How are the variables *bac8* and *bac10* defined? Interpret the coefficients on *bac8* and *bac10*. Do *per se laws* have a negative effect on the fatality rate? What about having a primary seat belt law? (Note that if a law was enacted sometime within a year the fraction of the year is recorded in place of the zero-one indicator.)
 
+```{r}
+lm2 <- lm(totfatrte ~ d81 + d82 + d83 + d84 + d85 + d86 + d87 + d88 + d89 + d90 + d91 + d92 + d93 + d94 + d95 + d96 + d97 + d98 + d99 + d00 + d01 + d02 + d03 + d04 + bac08 + bac10 + perse + sbprim + sbsecon + sl70plus + gdl + perc14_24 + unem + vehicmilespc, data)
+
+lm2
+```
+
 4. Reestimate the model from *Exercise 3* using a fixed effects (at the state level) model. How do the coefficients on *bac08, bac10, perse, and sbprim* compare with the pooled OLS estimates? Which set of estimates do you think is more reliable? What assumptions are needed in each of these models?  Are these assumptions reasonable in the current context?
+
+```{r}
+plm(totfatrte ~ d81 + d82 + d83 + d84 + d85 + d86 + d87 + d88 + d89 + d90 + d91 + d92 + d93 + d94 + d95 + d96 + d97 + d98 + d99 + d00 + d01 + d02 + d03 + d04 + bac08 + bac10 + perse + sbprim + sbsecon + sl70plus + gdl + perc14_24 + unem + vehicmilespc, data)
+```
 
 5. Would you perfer to use a random effects model instead of the fixed effects model you built in *Exercise 4*? Please explain.
 
