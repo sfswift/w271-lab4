@@ -80,20 +80,6 @@ load('driving.RData')
 Our research question is whether or not traffic laws can affect total fatalities. Total fatalities is a function of population, vehicle miles, traffic laws and unobservable variables. Our dataset contains 9 fatality-related variables, some normalized in various ways. We will not consider the weekend and night fatality variables as we are focusing on total fatalities and not when they occurred.
 
 ```{r}
-#df=data[,c('year','state','totfatrte','sl55','sl65','sl70','sl75','slnone','seatbelt','minage','zerotol','gdl','bac10','bac08','perse','statepop','unem','perc14_24')]
-```
-
-```{r }
-#table(df$year)
-#table(df$state)
-```
-
-```{r}
-#pairs(~totfatrte+zerotol+gdl+perse+vehicmilespc, data=tmp, lower.panel=panel.smooth)
-
-#ggplot(tmp, aes(x=totfatrte, y=zerotol)) + geom_point()
-```
-```{r}
 ggplot(data,aes(y=statepop,x=factor(year),group=factor(state),color=factor(state)))+geom_line()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+labs(x=c('Year'),y=c('Fatalities/population'),title=c('Fatalies/Population by Year by State'),color=c('State'))+theme(plot.title = element_text(hjust = 0.5))
 ```
 
@@ -111,7 +97,7 @@ plottot('totfatrte')
 
 ## HISTOGRAM ISN'T DISPLAYING TITLES
 
-Mean fatalities/population has dropped by about 10% from 1980 to 2004. State 51 has persistently stayed near the top of the fatalies while State 38 seems to stay near the bottom. The range of fatalities changes throughout time, with the highest fatality rate dropping from over 50% in 1980 to under 45% in 2004. The minimum values for fatalities drop at well, but less overall, from about just over $10$ in 1980 to just under $10$ in 2004.```{}
+Mean fatalities/population has dropped by about 10% from 1980 to 2004. State 51 has persistently stayed near the top of the fatalies while State 38 seems to stay near the bottom. The range of fatalities changes throughout time, with the highest fatality rate dropping from over 50% in 1980 to under 45% in 2004. The minimum values for fatalities drop at well, but less overall, from about just over $10$ in 1980 to just under $10$ in 2004.
 
 ```{r}
 # I merged this back into the totfatrte with ggplot
@@ -338,7 +324,6 @@ tmp$year=1981:2004
 tmp$beta=(tmp$lower+tmp$upper)/2
 
 ggplot(tmp,aes(x=year,y=beta))+geom_point(size=2.5,color='red')+geom_line()+geom_errorbar(aes(ymax=tmp$upper,ymin=tmp$lower)) +labs('title'='Coefficients for fatality by Year (Mean difference from 1980)',x='Year',y="Fatality difference from 1980")
-points(x=1981:2004,y=m$coefficients[2:length(m$coefficients)],col='blue')
 ```
 
 Note that the residuals are not normally distributed and fails the Shapiro Wilks test.
@@ -413,13 +398,13 @@ y_{it}-\bar{y}_i= -1.95 (x_{(bac08)it}-\bar{x}_{bac08}) +  -1.56 (x_{(bac10)it}-
 $$
 
 ```{r}
-tmp=data %>% group_by(year) %>% summarize_all(funs(means)) %>% select(vehicmilespc) %>% as.data.frame
+tmp=data %>% group_by(year) %>% summarize_all(funs(mean)) %>% select(vehicmilespc) %>% as.data.frame
 tmp=mean(diff(tmp))
 ```
 
 (Question 6) If $vehicmilepc$ increase by 1,000 in a time period $t$ assuming the $\bar{vehicmilepc}$ does not change form the FE model, $totfatrte$ is expected to increase `r var1` with a 95% confidence interval of `r var2`. The $\beta_{vehicmilespc}$ is not a very precise estimate. The reason is that there is minimal time-variance on the variable. The mean variance across the years on vehicmilespc is `r tmp` while the average is `r mean(data$vehicmilespc)`. The small variation across time causes the estimate to be imprecise. For example, a 10% increase in $vehicmilespc$ has a 95% confidence interval of $0.114$ and $0.48$ $totfatrte$, which would roughly be a 5% difference in $totfatret$ between the lower and upper bound.
 
-(Question 7) When autocorrelation and heteroskedasticity exists in errors, it causes your estimators to be inefficient while still unbiased. The standard errors estimated on the estimators are incorrect as the variance of the estimators is inflated (heteroskedasticity). It is inefficient as it is no longer the minimum variance estimator.
+(Question 7) Assuming we have no omitted variable bias and autocorrelation and heteroskedasticity exists in errors, it causes your estimators to be inefficient while still unbiased. The standard errors estimated on the estimators are incorrect as the variance of the estimators is inflated (heteroskedasticity). It is inefficient as it is no longer the minimum variance estimator.
 
 **Exercises:**
 
