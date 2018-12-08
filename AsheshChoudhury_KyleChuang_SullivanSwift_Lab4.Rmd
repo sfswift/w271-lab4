@@ -230,8 +230,27 @@ plotmix(tmp,'vehicmilespc','Vehicle Miles Per Capita')
 
 Vehicle miles may be secondarily affected by traffic laws such as graduated license laws. Preliminarly, fatalities appear to decrease as it increases. This makes no sense and is likely to be trending effect through time.
 
-```{r fig.height=3}
+```{r}
 plotmix(tmp,'unem','Unemployment')
+
+plot(data$totfatrte, data$unem)
+cor(data$totfatrte, data$unem)
+
+conditional_plot(data, data$unem, data$state, "Unemployment Rate by State")
+```
+```{r}
+states <- unique(data$state)
+
+for(s in states){
+  d <- data[data$state==s,]
+  cor(d$totfatrte, d$unem)
+}
+
+# plot high correlation states
+```
+
+```{r}
+conditional_plot(data, data$totfatrte, data$state, "Total Fatality Rate per 100,000 populartion by State")
 ```
 
 ##Here I think using unique colors would look good. esp since the pattern is more random
@@ -375,7 +394,10 @@ lm2
 plm(totfatrte ~ d81 + d82 + d83 + d84 + d85 + d86 + d87 + d88 + d89 + d90 + d91 + d92 + d93 + d94 + d95 + d96 + d97 + d98 + d99 + d00 + d01 + d02 + d03 + d04 + bac08 + bac10 + perse + sbprim + sbsecon + sl70plus + gdl + perc14_24 + unem + vehicmilespc, data)
 ```
 
+
 5. Would you perfer to use a random effects model instead of the fixed effects model you built in *Exercise 4*? Please explain.
+
+Fixed effects are constant across the states and this may most likely not true, considering our EDA. Random effects vary across the states, and this is more likely to be close to reality.
 
 6. Suppose that *vehicmilespc*, the number of miles driven per capita, increases by $1,000$. Using the FE estimates, what is the estimated effect on *totfatrte*? Please interpret the estimate.
 
