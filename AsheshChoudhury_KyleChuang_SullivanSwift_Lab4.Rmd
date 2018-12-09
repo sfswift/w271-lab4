@@ -227,7 +227,7 @@ xtable(t(tmp2))
 Zero tolerance laws do not appear to have a contemperous impact on fatalities based on the changes in laws from 1992-1997. It may potentally have a long-tailed effect.
 
 ```{r}
-plotstackedbox(data,data$zerotol,'Zero Tolerance Law','Zero Tol. ')
+plotstackedbox(data,data$zerotol,'Zero Tolerance Law','Zero Tol. ','topright',2)
 ```
 
 Graduated driver license laws do not appear to impact fatalies very much. Most likely, it will not impact fatalities even accounting for time lags. The changes from graduated license laws from 1999 to 2004 barely impacted fatalities with or without lag effects.
@@ -376,27 +376,24 @@ m=lm(totfatrte~factor(year)+bac08+bac10+perse+sbprim+sbsecon+sl70plus+gdl+log(pe
 xtable(summary(m)$coefficients[26:35,])
 ```
 
-We did not not show all the $\beta$s for the factor year but they can be found in the R code. bac08 and bac10 have coefficients of `r round(data.frame(t(m$coefficients))$bac08,3)` and `r round(data.frame(t(m$coefficients))$bac10,3)`. The $\beta_{bac08}$ and $\beta_{bac10}$ represent the impact of having bac08 and bac10 laws in that year (regardless of the year) on the *mean* fatalities across the states. Per se laws also decrease the mean fatalities by `r round(data.frame(t(m$coefficients))$perse,3)` once it's enacted. Primary seat belt laws does not seem to have an impact on fatalities despite the $\beta_{sbprim}=$ `r round(data.frame(t(m$coefficients))$sbprim,3)`. We note that all the $\beta$ estimators, p-values and other regression statistics above are biased, inconsistent and inefficient as fixed effects and explanatory variable are likely to be correlated. In reality, no conclusion or inference can be made with the estimator since the regression assumptions are violated and estimators are biased. We note that the residuals fail both the Shapiro-Wilks normality test and Durbin-Watson serial correlation test.
+We did not not show all the $\beta$s for the factor year but they can be found in the R code. bac08 and bac10 have coefficients of `r round(data.frame(t(m$coefficients))$bac08,3)` and `r round(data.frame(t(m$coefficients))$bac10,3)`. The $\beta_{bac08}$ and $\beta_{bac10}$ represent the impact of having bac08 and bac10 laws in that year on the fatalities across the states. Per se laws also decrease fatalities by `r round(data.frame(t(m$coefficients))$perse,3)` once it's enacted. Primary seat belt laws seems decrease the fatalities with $\beta_{sbprim}=$ `r round(data.frame(t(m$coefficients))$sbprim,3)`. We note that all the $\beta$ estimators, p-values and other regression statistics above are biased, inconsistent and inefficient as fixed effects and explanatory variable are likely to be correlated. In reality, no conclusion or inference can be made with the estimator since the regression assumptions are violated and estimators are biased. We note that the residuals fail both the Shapiro-Wilks normality test and Durbin-Watson serial correlation test.
 
 ```{r results='markup'}
 shapiro.test(m$residuals)
 durbinWatsonTest(m)
 ```
 
-Additionally, we can do a pool test to check if the coefficients are consistent vs a fixed effects model. The hypothesis is rejected showing that the estimates are not consistent either (we can take 1 cross-sectional regressional and obtain unbiased estimators *if* unobserved effects are uncorrelated with explanatory variables).
+Additionally, we can do a pool test to check if the coefficients are consistent vs a fixed effects model. The hypothesis is rejected showing that the estimates are not consistent.
 
 ```{r results='markup'}
 pooltest(totfatrte~bac08+bac10+perse+sbprim+sbsecon+sl70plus+gdl+log(perc14_24)+log(unem)+vehicmilespc,data = data.p,model='within')
 ```
-
-
 ```{r include=FALSE}
 #library(plm)
 #data.p=pdata.frame(data,index = c('state','year'))
 #m.pool=plm(totfatrte~factor(year)+bac08+bac10+perse+sbprim+sbsecon+sl70plus+gdl+log(perc14_24)+log(unem)+vehicmilespc,data = data.p,model='pooling')
 #summary(m.pool)
 ```
-
 (Question 4) Given the pooled model assumptions may be violated, we will examine data using a fixed effects model.
 ```{r}
 m.fe=plm(totfatrte~bac08+bac10+perse+sbprim+sbsecon+sl70plus+gdl+log(perc14_24)+log(unem)+vehicmilespc,data = data.p,model='within')
@@ -417,9 +414,9 @@ d=data.frame(pooled_coef=summary(m)$coefficients[26:35,1],
 xtable(d)
 ```
 
-The coefficients are different between the pooled OLS and Fixed Effects regression. The downward bias from pooled OLS due to fixed effects appears in `bac08` and `log(perc14_24)`. `bac10` and `vehicmilespc` is roughly unbiased. `perse`, `gds`, `sbprim`, and `sbsecon` have been biased upwards. More importantly, `sl70plus` and `log(unem)` have both been biased by fixed effects such that the signs of the coefficients are incorrect. No inferences can really be made from the regression as the standard errors are incorrect due to serially correlated residuals.
+The coefficients are different between the pooled OLS and Fixed Effects regression. The downward bias from pooled OLS due to fixed effects appears in `bac08` and `log(perc14_24)`. `bac10` and `vehicmilespc` are roughly unbiased. `perse`, `gds`, `sbprim`, and `sbsecon` have been biased upwards. More importantly, `sl70plus` and `log(unem)` have both been biased by fixed effects such that the signs of the coefficients are incorrect. No inferences can really be made from the regression as the standard errors are incorrect due to serially correlated residuals.
 
-FE model is better than pooled OLS since it removes the fixed effects. Pooled OLS assumes that there is no correlation between unobserved variable and any of the regressors. This assumption is clearly broken. For example, dry laws, which are unobserved, may be correlated with bac08 laws and affect fatalities. From the pool test and above, we can tell the estimators are biased in the pooled OLS since the estimators are different. Therefore, correlation of fixed effects and explanatory variables definitely exist. In addition to biased estimators, note the SE of pooled OLS are much to tight since it assumes we have more independent random observations than reality since we only have $n=48$ independent observations per time period. The rest of the observations across time are serially correlated and not independent. For the FE models, the assumption is that the idiosyncratic errors ($\epsilon_{it}$) are uncorrelated conditional on the indepdendent variables and time-invariant unobservable variables. Given the current context, it the FE assumptions are more reasonable as time-invariant variables can be eliminated. Though FE errors are still serially correlated, we will at least have unbiased estimators. In the case of pooled OLS, the estimators will not be unbiased.
+FE model is better than pooled OLS since it removes the fixed effects. Pooled OLS assumes that there is no correlation between unobserved variable and any of the regressors. This assumption is clearly broken. For example, dry laws, which are unobserved, may be correlated with bac08 laws and affect fatalities. From the pool test and above, we can tell the estimators are biased in the pooled OLS since the estimators are different. Therefore, correlation of fixed effects and explanatory variables definitely exist. The bias causing incorrect signs of coefficients in `sl70plus` and `log(unem)` is notable. For the FE models, the assumption is that the idiosyncratic errors ($\epsilon_{it}$) are uncorrelated conditional on the indepedendent variables and time-invariant unobservable variables. Given the current context, it the FE assumptions are more reasonable as time-invariant variables can be eliminated. Though FE errors are still serially correlated preventing us from doing proper inference, we will at least have unbiased estimators. In the case of pooled OLS, the estimators will not be unbiased and inference cannot be done either.
 
 (Question 5) In comparing FE models with RE models, FE models is likely to be a better estimate in the current context. Like the Pooled OLS, RE model assumes no correlation between fixed effects and explanatory variables. The difference between the pooled OLS and RE models is that RE corrects the serial correlation within the composite error by estimating a correlation. The advantage of RE models over FE is the ability to estimate time-invariant variables. However, it also requires an extremely strong assumption that fixed effects are independent of all explanatory variables across all time periods. Given the endogeneity issues, we believe fixed effects is a much better model than random effects. We can run a Hausman test where the $H_0$ is that the unique errors are not correlated with the regressors. The $H_0$ is rejected in the Hausman test.
 
@@ -432,9 +429,14 @@ summary(m.fe)
 ```
 
 The final model is
-$$
-y_{it}-\bar{y}_i= -1.95 (x_{(bac08)it}-\bar{x}_{bac08}) +  -1.56 (x_{(bac10)it}-\bar{x}_{bac10}) -1.56 (x_{(per se)it}-\bar{x}_{per se}) + -1.80 (x_{(sbprim)it}-\bar{x}_{sbprim}) + -0.86(x_{(sbsecon)it}-\bar{x}_{sbsecon}) + -1.12 (x_{(sl70plus)it}-\bar{x}_{sl70plus})  + -0.59 (x_{(sl70plus)it}-\bar{x}_{sl70plus} + 14.66(x_{(log(per14_24))it}-\bar{x}_{log(perc14_24)})+-0.59(x_{(log(unem))it}-\bar{x}_{log(unem)})+0.0003(x_{(vehicmilespc)it}-\bar{x}_{vehicmilespc})
-$$
+\[ \begin{aligned}
+y_{it}-\bar{y}_i=& -1.95 (x_{(bac08)it}-\bar{x}_{bac08}) +  -1.56 (x_{(bac10)it}-\bar{x}_{bac10}) -1.56 (x_{(per se)it}-\bar{x}_{per se}) \\
+&+ -1.80 (x_{(sbprim)it}-\bar{x}_{sbprim}) +-0.86(x_{(sbsecon)it}-\bar{x}_{sbsecon}) \\
+&+ -1.12 (x_{(sl70plus)it}-\bar{x}_{sl70plus})  + -0.59 (x_{(sl70plus)it}-\bar{x}_{sl70plus} \\ 
+&+ 14.66(x_{(log(per14_24))it}-\bar{x}_{log(perc14_24)})+-0.59(x_{(log(unem))it}-\bar{x}_{log(unem)})\\
+&+0.0003(x_{(vehicmilespc)it}-\bar{x}_{vehicmilespc})
+\end{aligned}
+\]
 ```{r}
 tmp=data %>% group_by(state) %>% summarize_all(funs(mean)) %>% select(state,vehicmilespc) %>% as.data.frame
 l=NULL
@@ -443,9 +445,9 @@ for (i in tmp[,1]){
 }
 ```
 
-(Question 6) If $vehicmilepc$ increase by 1,000 in a time period $t$ assuming the $\bar{vehicmilepc}$ does not change form the FE model, $totfatrte$ is expected to increase `r round(data.frame(t(m.fe$coefficients))$vehicmilespc,3)` with a 95% confidence interval of `r round(data.frame(t(confint(m.fe)))$vehicmilespc,3)`. The $\beta_{vehicmilespc}$ is may not be an extremely precise estimate. We note that the standard deviation after differencing the mean on vehicmilespc is `r round(sd(l),5)` while the standard deviation without differencing is `r round(sd(data$vehicmilespc),5)`. The smaller variation across time causes the estimate to be less mprecise.
+(Question 6) If $vehicmilepc$ increase by 1,000 in a time period $t$ assuming the mearn, $\bar{vehicmilepc}$, does not change in the FE model, $totfatrte$ is expected to increase `r round(data.frame(t(m.fe$coefficients))$vehicmilespc,3)` with a 95% confidence interval of `r round(data.frame(t(confint(m.fe)))$vehicmilespc,3)`. The $\beta_{vehicmilespc}$ may not be an extremely precise estimate. We note that the standard deviation after differencing the mean on vehicmilespc is `r round(sd(l),3)` while the standard deviation without differencing is `r round(sd(data$vehicmilespc),3)`. The smaller variation across time causes the estimate to be less precise.
 
-(Question 7) Assuming we have no omitted variable bias (FE model) with autocorrelation and heteroskedasticity exists in errors, it causes your estimators to be inefficient while still unbiased. The standard errors estimated on the estimators are incorrect as the variance formula used for estimation is incorrect. It is inefficient as it is no longer the minimum variance estimator.
+(Question 7) Assuming we have no omitted variable bias (FE model) with autocorrelation and heteroskedasticity exists in errors, the estimators will be inefficient but unbiased. The standard errors estimated on the estimators are incorrect as the variance formula used for estimation is incorrect. It is inefficient as it is no longer the minimum variance estimator.
 
 **Exercises:**
 
