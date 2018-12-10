@@ -245,10 +245,10 @@ plotmix(data,'vehicmilespc','Vehicle Miles Per Capita')
 While all states increased `vehicmilespc`, state 46 was interesting in that there was a large increase in 2001-2001 followed by a large drop back down to historical trend by 2003-2004. Closer, state-specific reasoning may be required. Given that we do not have that information, we will not examine it further.
 
 ```{r}
-ggplot(data,aes(y=vehicmilespc,x=factor(year),group=factor(state),color=factor(state)))+geom_line()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+labs(x=c('Year'),y=c('Vehicle Miles/Capita'),title=c('Fatalies/Population by Year by State'),color=c('State'))+theme(plot.title = element_text(hjust = 0.5))+guides(color=FALSE)
+ggplot(data,aes(y=vehicmilespc,x=factor(year),group=factor(state),color=factor(state)))+geom_line()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+labs(x=c('Year'),y=c('Vehicle Miles/Capita'),title=c('Vehicle Miles/Capita by Year by State'),color=c('State'))+theme(plot.title = element_text(hjust = 0.5))+guides(color=FALSE)
 ```
 
-Fatalities do not appear to be affected by unemployment rates at all. In fact, the pattern appears somewhat random. We expect this variable to have a $\beta_{unem}$ close to 0 in regressions. If we do include the variable, we may want to consider logging it to spread out the values and improve the regression. It does not appear heteroskedastic.
+Fatalities do not appear to be affected by unemployment rates. In fact, the pattern appears somewhat random. We expect this variable to have a $\beta_{unem}$ close to 0 in regressions. If we do include the variable, we may want to consider logging it to spread out the values and improve the regression. It does not appear heteroskedastic.
 
 ```{r}
 plotmix(data,'unem','Unemployment')
